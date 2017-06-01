@@ -1,15 +1,19 @@
 local BatchLoader = {}
 
--- BatchLoader.NUM_STREAMS = 3
--- BatchLoader.batch_counter = 1
--- BatchLoader.no_of_batches = 0
+BatchLoader.NUM_STREAMS = 3
+BatchLoader.batch_counter = 1 --TODO: Do I need to make this local, such that this is contained in the file only?
+BatchLoader.no_of_batches = 0
 
-NUM_STREAMS = 3
-batch_counter = 1 --TODO: Do I need to make this local, such that this is contained in the file only?
-no_of_batches = 0
-function BatchLoader(X, y, sids, batch_size, argshuffle)
+-- HELPER FUNCTIONS
+local function tablelength(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
+
+-- INITIALIZER
+function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 	
-
 	--Shuffling items
 	if argshuffle then 
 		local perm = torch.randperm(sids:size(1)):long()
@@ -40,7 +44,7 @@ function BatchLoader(X, y, sids, batch_size, argshuffle)
 		local tmp_sid = {}
 		local cur_random_stream
 
-		for i=1, NUM_STREAMS do 
+		for i=1, BatchLoader.NUM_STREAMS do 
 
 			--TODO check if enough batches exist
 			--Delete key if not enough (batch_size) samples existent
@@ -74,10 +78,10 @@ function BatchLoader(X, y, sids, batch_size, argshuffle)
 		end
 
 		if not no_more_full_batches_left then
-			no_of_batches = no_of_batches + 1
-			X_batches[no_of_batches] = tmp_x
-			y_batches[no_of_batches] = tmp_y
-			sid_batches[no_of_batches] = tmp_sid
+			BatchLoader.no_of_batches = BatchLoader.no_of_batches + 1
+			X_batches[BatchLoader.no_of_batches] = tmp_x
+			y_batches[BatchLoader.no_of_batches] = tmp_y
+			sid_batches[BatchLoader.no_of_batches] = tmp_sid
 		end
 	end
 
@@ -87,15 +91,15 @@ function BatchLoader(X, y, sids, batch_size, argshuffle)
 
 end
 
-
-function load_batch(X_batches, y_batches, sid_batches)
+-- LOADER FUNCTION
+function BatchLoader.load_batch(X_batches, y_batches, sid_batches)
 	
 	local epoch_done = false
 	local Xout = X_batches[batch_counter]
 	local yout = y_batches[batch_counter]
 
-	batch_counter = batch_counter + 1
-	if batch_counter > no_of_batches then
+	BatchLoader.batch_counter = BatchLoader.batch_counter + 1
+	if BatchLoader.batch_counter > BatchLoader.no_of_batches then
 		epoch_done = true
 	end
 
@@ -104,50 +108,9 @@ function load_batch(X_batches, y_batches, sid_batches)
 end
 
 
-function tablelength(T)
-  local count = 0
-  for _ in pairs(T) do count = count + 1 end
-  return count
-end
 
 
-
-X_test = torch.Tensor(1400, 16, 8)
-y_test = torch.Tensor(1400)
-sids_test = torch.range(1,1401) --torch.Tensor(1400)
-
-local test_fnc = {}
-gen = torch.Generator()
-for i=1, 1399 do
-	local rnd_num = torch.random(gen, 0, 18)
-	local inp_val = torch.Tensor(1):fill(rnd_num)
-	-- print("This random number is")
-	-- print(inp_val)
-	table.insert(test_fnc, inp_val)
-end
-
-sids_test = torch.cat(test_fnc)
-
-
-
-print("Running batchloader")
-X_batches, y_batches, sid_batches = BatchLoader(X_test, y_test, sids_test, 50, true)
-
-local edone = false
-while not edone do
-	xb, yb, edone = load_batch(X_batches, y_batches, sid_batches)
-end
--- qss = torch.Tensor(5):zero()
--- sqq = vector_unique(qss:narrow(1, 2, 3):fill(1))
--- print(sqq)
-
-
--- print(test_vec)
--- to_data_dict(test_vec)
-
-
--- tmp = vector_unique({1, 2, 3, 4, 2, 4, 1, 4, 5, 2, 1, 5,2 ,2, 5, 9})
--- print(tmp)
+return BatchLoader
 
 
 

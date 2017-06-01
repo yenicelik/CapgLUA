@@ -1,18 +1,23 @@
 local lfs = require 'lfs'
 local inspect = require('inspect')
 local matio = require 'matio'
-NUM_GESTURES = 8
+
+local InterSessionImporter = {}
+
+InterSessionImporter.NUM_GESTURES = 8
+
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
+-- HELPER FUNCTIONS
+function concat(t1, t2)
+	for i=1,#t2 do
+        t1[#t1+1] = t2[i]
+    end
+    return t1
+end
 
---File Structure::
---1. InterSession
---2. get_train_cv_test_given_sid
--- -- get_filepaths_in_directory
--- -- get_data_from
--- -- get_X_y_sid_from_data
-
+-- LOCAL FUNCTIONS
 local function get_filepaths_in_directory(parent_directory)
 	local files = {}
 	for entity in lfs.dir(parent_directory) do
@@ -92,17 +97,8 @@ local function get_X_y_sid_from_data(filepaths)
 end
 
 
--- HELPER FUNCTIONS
-function concat(t1, t2)
-	for i=1,#t2 do
-        t1[#t1+1] = t2[i]
-    end
-    return t1
-end
-
-
 -- MAIN FUNCTION
-function InterSession(data_parent_dir)
+function InterSessionImporter.init(data_parent_dir)
 	-- Default arguments
 	local data_parent_dir = data_parent_dir or "../Datasets/Preprocessed/DB-a"
 
@@ -114,8 +110,7 @@ function InterSession(data_parent_dir)
 
 end
 
-InterSession()
-
+return InterSessionImporter
 -- local filepaths = get_filepaths_in_directory("../Datasets/Preprocessed/DB-a")
 -- get_data_from_filepaths(filepaths)
 
