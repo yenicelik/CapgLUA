@@ -1,9 +1,14 @@
-NUM_STREAMS = 3
-batch_counter = 0 --TODO: do I need to add a local here?
-samples = 0
+local BatchLoader = {}
 
+-- BatchLoader.NUM_STREAMS = 3
+-- BatchLoader.batch_counter = 1
+-- BatchLoader.no_of_batches = 0
+
+NUM_STREAMS = 3
+batch_counter = 1 --TODO: Do I need to make this local, such that this is contained in the file only?
+no_of_batches = 0
 function BatchLoader(X, y, sids, batch_size, argshuffle)
-	no_of_batches = 1
+	
 
 	--Shuffling items
 	if argshuffle then 
@@ -52,19 +57,14 @@ function BatchLoader(X, y, sids, batch_size, argshuffle)
 			gen = torch.Generator()
 			cur_stream = all_indecies[torch.random(gen, 1, #all_indecies)]
 
-			--This should select the first batch_size items
-			--Save first (batch_size) samples into the temporary variables
-			first_batch_item_indecies = categorized_sids[cur_stream][{{1, batch_size}}]			
-			tmp_x[i] = X[{{1, first_batch_item_indecies}, {}, {}}]
-			tmp_y[i] = y[{{1, first_batch_item_indecies}}]
-			tmp_sid[i] = sids[{first_batch_item_indecies}]
+			--Selecting the first few indecies of the respective queue
+			index_of_first_few = categorized_sids[cur_stream][{{1, batch_size}}]:type('torch.LongTensor')			
+			--TODO make sure these operators are analgous for higher-sized tensors, this was only tested for sid			
+			tmp_x[i] = X:index(1, index_of_first_few:view(index_of_first_few:nElement()))
+			tmp_y[i] = y:index(1, index_of_first_few:view(index_of_first_few:nElement())) 
+			tmp_sid[i] = sids:index(1, index_of_first_few:view(index_of_first_few:nElement()))
 
-			print(tmp_sid[i])
-
-			-- print("This should grow")
-			-- print(tmp_sid)
-
-			--Modify or delete the queue of the respective cur_stream
+			--Modify or remove dictionary entry
 			local len = categorized_sids[cur_stream]:size(1)
 			if len - batch_size - 1 < batch_size then
 				categorized_sids[cur_stream] = nil
@@ -74,17 +74,32 @@ function BatchLoader(X, y, sids, batch_size, argshuffle)
 		end
 
 		if not no_more_full_batches_left then
+			no_of_batches = no_of_batches + 1
 			X_batches[no_of_batches] = tmp_x
 			y_batches[no_of_batches] = tmp_y
 			sid_batches[no_of_batches] = tmp_sid
-			no_of_batches = no_of_batches + 1
 		end
 	end
 
-	print(sid_batches[1][1])
-	print(type(sid_batches[1][1]))
+	print(sid_batches)
 
 	return X_batches, y_batches, sid_batches
+
+end
+
+
+function load_batch(X_batches, y_batches, sid_batches)
+	
+	local epoch_done = false
+	local Xout = X_batches[batch_counter]
+	local yout = y_batches[batch_counter]
+
+	batch_counter = batch_counter + 1
+	if batch_counter > no_of_batches then
+		epoch_done = true
+	end
+
+	return Xout, yout, epoch_done
 
 end
 
@@ -95,22 +110,6 @@ function tablelength(T)
   return count
 end
 
--- local function to_data_dict(argsids)
--- 	local out = {};
-
--- 	for i=0, 18 do
--- 		out[i] = torch.Tensor(1)
--- 	end
-
--- 	print(out)
-
--- 	for i=1, argsids:size(1) do --TODO does
--- 		print(argsids[i])
--- 		print(out[argsids[i]])
--- 		out[argsids[i]]:insert(i)
--- 	end
--- 	return out
--- end
 
 
 X_test = torch.Tensor(1400, 16, 8)
@@ -132,7 +131,12 @@ sids_test = torch.cat(test_fnc)
 
 
 print("Running batchloader")
-BatchLoader(X_test, y_test, sids_test, 10, true)
+X_batches, y_batches, sid_batches = BatchLoader(X_test, y_test, sids_test, 50, true)
+
+local edone = false
+while not edone do
+	xb, yb, edone = load_batch(X_batches, y_batches, sid_batches)
+end
 -- qss = torch.Tensor(5):zero()
 -- sqq = vector_unique(qss:narrow(1, 2, 3):fill(1))
 -- print(sqq)
