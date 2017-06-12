@@ -25,40 +25,39 @@ optimState = {
 optimMethod = optim.sgd
 
 -- DEFINING TRAINING PROCEDURE ------------------------------------------------
-function train()
+function train(epoch)
 	epoch = epoch or 1
-
-	print(arg)
 
 	model:training()
    	print("==> epoch # " .. epoch .. ' [batchSize = ' .. arg.batchsize .. ']')
 
-   	--Doing one full epoch
+   	--DO ONE FULL EPOCH
    	--Per batch do this
-   	input = torch.rand(arg.batchsize, 1, 8, 16)
-   	output = torch.rand(arg.batchsize, 2)
-   	print(input:size())
-   	print(output:size())
-	
-	-- sample_batchsize = 2
-	-- sample_X = torch.rand(sample_batchsize, 1, 8, 16)
-	-- sample_y = torch.rand(sample_batchsize, arg.numgestures)
-   	
-   	-- feed it to the neural network and the criterion
-	criterion:forward(model:forward(input), output)
+   	local input = torch.rand(arg.batchsize, 1, 8, 16)
+   	local output = torch.rand(arg.batchsize, arg.numgestures)
+   	local maxs, output = torch.max(output, 2)
+   	-- print("Input size")
+   	-- print(input:size())
+   	-- print("Output:")
+   	-- print(output)
+   	-- print("Output size")
+   	-- print(output:size())
 
-	-- train over this example in 3 steps
-	-- (1) zero the accumulation of the gradients
-	model:zeroGradParameters()
-	-- (2) accumulate gradients
-	model:backward(input, criterion:backward(model.output, output))
-	-- (3) update parameters with a 0.01 learning rate
-	model:updateParameters(0.01)
+   	-- feed it to the neural network and the criterion
+   	criterion:forward(model:forward(input), output)
+
+   	-- train over this example in 3 steps
+   	-- (1) zero the accumulation of the gradients
+   	model:zeroGradParameters()
+   	-- (2) accumulate gradients
+   	model:backward(input, criterion:backward(model.output, output))
+   	-- (3) update parameters with a 0.01 learning rate
+   	model:updateParameters(0.01)
 
 end
 
-for epoch = 1, 20 do
-	train()
+for epoch = 1, 100 do
+	train(epoch)
 end
 
 
