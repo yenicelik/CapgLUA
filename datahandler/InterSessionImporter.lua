@@ -1,6 +1,7 @@
 local lfs = require 'lfs'
-local inspect = require('inspect')
+--local inspect = require('inspect')
 local matio = require 'matio'
+require '../config.lua'
 
 local InterSessionImporter = {}
 
@@ -55,7 +56,14 @@ local function get_X_y_sid_from_data(filepaths)
 
 	X_list, y_list, sid_list = {}, {}, {}
 
+	full = false
+	local devcounter = 1
 	for key, val in pairs(filepaths) do --so, is it only possible to call a pair-function as an iteration-generator?
+		devcounter = devcounter + 1
+		if (not full) and devcounter > 100 then
+			print("Stopping...")
+			break
+		end
 		gesture = matio.load(val, 'gesture'):type('torch.FloatTensor') --Do I even need to cast this?
 		if gesture == 101 and NUM_GESTURES == 10 then
 			gesture = 10
@@ -75,37 +83,20 @@ local function get_X_y_sid_from_data(filepaths)
 	y_out = torch.cat(y_list)
 	sid_out = torch.cat(sid_list)
 
-		-- X_out = torch.cat({X_out, data}, 1)
-		-- sid_out = torch.cat(sid_out, sid)
-		-- y_out = torch.cat(y_out, gesture)
-
-	print("Done with!")
-	print(val)
-
 	end
-
-	print(sid_out)
-
-	print("X")
-	print(X_out:size())
-	print("Sid")
-	print(sid_out:size())
-	print("Gesture")
-	print(y_out:size())
-
-	return X_out, y_out, sid_out
+	return X_out, y_out:t(), sid_out:t()
 end
 
 
 -- MAIN FUNCTION
-function InterSessionImporter.init(data_parent_dir)
+function InterSessionImporter.init(data_parent_dir, dev)
 	-- Default arguments
+	local dev = dev or false
 	local data_parent_dir = data_parent_dir or "../Datasets/Preprocessed/DB-a"
 
 	-- How do we create default parameters?
 	local filepaths = get_filepaths_in_directory(data_parent_dir)
 	local X, y, sids = get_X_y_sid_from_data(filepaths)
-
 	return X, y, sids
 
 end

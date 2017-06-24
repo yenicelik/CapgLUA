@@ -1,5 +1,5 @@
--- local batchLoader = require "BatchLoader"
-
+local batchLoader = require "BatchLoader.lua"
+require "../config.lua"
 -- local X_test = torch.Tensor(1400, 16, 8)
 -- local y_test = torch.Tensor(1400)
 -- local sids_test = torch.range(1,1401) --torch.Tensor(1400)
@@ -16,9 +16,8 @@
 
 -- local sids_test = torch.cat(test_fnc)
 
-
-
--- print("Running batchloader")
+print("Input batchsize is")
+print(arg.batchsize)
 -- X_batches, y_batches, sid_batches = batchLoader.init(X_test, y_test, sids_test, 50, true)
 
 -- local edone = false
@@ -26,6 +25,18 @@
 -- 	xb, yb, edone = batchLoader.load_batch(X_batches, y_batches, sid_batches)
 -- end
 
-local interSessionImproter = require "InterSessionImporter"
+local interSessionImporter = require "InterSessionImporter"
 
-interSessionImproter.init()
+X_data, y_data, sid_data = interSessionImporter.init(data_parent_dir)
+
+print("SID DATA IS: ")
+print(sid_data:size())
+print("X_data")
+print(X_data:size())
+print("y_data")
+print(y_data:size())
+print("sid_data")
+print(sid_data:size())
+
+X_batches, y_batches, sid_batches = batchLoader.init(X_data, y_data, sid_data, arg.batchsize, true)
+--X, y, sids, batch_size, argshuffle)

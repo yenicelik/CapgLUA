@@ -1,5 +1,5 @@
 local BatchLoader = {}
-
+-- Stuff
 BatchLoader.NUM_STREAMS = 3
 BatchLoader.batch_counter = 1 --TODO: Do I need to make this local, such that this is contained in the file only?
 BatchLoader.no_of_batches = 0
@@ -13,21 +13,34 @@ end
 
 -- INITIALIZER
 function BatchLoader.init(X, y, sids, batch_size, argshuffle)
-	
 	--Shuffling items
 	if argshuffle then 
 		local perm = torch.randperm(sids:size(1)):long()
-		X = X:index(1, perm) --TODO make sure this actually shuffles the data!
-		y = y:index(1, perm)
-		sids = sids:index(1,perm)
+		print("\n\n\nSize of X and y before")
+		print(X:view(-1, 1000, 128):size())
+		print(y:size())
+		print(sids:size())
+		print("\nPerm size is: ")
+		print(perm:size())
+		X = X:view(-1, 1000, 128)[{{perm},{},{}}]
+		y = y[{{perm},{}}]
+		print(sids[{{1}, {}}])
+		sids = sids[{{perm},{}}]
+		print(sids[{{1}, {}}])
+        print(X:size())
+		print(y:size())
+		print(sids:size())
+		os.exit(69)
 	end
 
 	--Creating table of included sub-indecies
 	local categorized_sids = {}
 	for i=0, 18 do
 		categorized_sids[i] = sids:eq(i):nonzero()
-		if categorized_sids[i]:size(1) < batch_size then
+		if (not categorized_sids[i]) or (categorized_sids[i]:nDimension() == 0 or categorized_sids[i]:size(1) < batch_size) then
 			categorized_sids[i] = nil
+		else
+		    categorized_sids[i] = categorized_sids[i][{{},{2}}]
 		end
 	end
 
@@ -64,10 +77,17 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 			--Selecting the first few indecies of the respective queue
 			index_of_first_few = categorized_sids[cur_stream][{{1, batch_size}}]:type('torch.LongTensor')			
 			--TODO make sure these operators are analgous for higher-sized tensors, this was only tested for sid			
-			tmp_x[i] = X:index(1, index_of_first_few:view(index_of_first_few:nElement()))
-			tmp_y[i] = y:index(1, index_of_first_few:view(index_of_first_few:nElement())) 
-			tmp_sid[i] = sids:index(1, index_of_first_few:view(index_of_first_few:nElement()))
-
+			deb1 = index_of_first_few
+			print("Deb1")
+			print(deb1)
+			print("X, y, sids shape")
+			print(X:size())
+			print(y:size())
+			print(sids:size())
+			tmp_x[i] = X[{{index_of_first_few},{}}]
+            tmp_y[i] = y[{{index_of_first_few}}]
+			tmp_sid[i] = sids[{{index_of_first_few}}]
+			os.exit(69)
 			--Modify or remove dictionary entry
 			local len = categorized_sids[cur_stream]:size(1)
 			if len - batch_size - 1 < batch_size then
@@ -86,6 +106,7 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 	end
 
 	print(sid_batches)
+
 
 	return X_batches, y_batches, sid_batches
 
