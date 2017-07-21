@@ -1,5 +1,7 @@
-local BatchLoader = {}
+local th = require "torch"
 
+local BatchLoader = {}
+-- Stuff
 BatchLoader.NUM_STREAMS = 3
 BatchLoader.batch_counter = 1 --TODO: Do I need to make this local, such that this is contained in the file only?
 BatchLoader.no_of_batches = 0
@@ -13,23 +15,34 @@ end
 
 -- INITIALIZER
 function BatchLoader.init(X, y, sids, batch_size, argshuffle)
-	
 	--Shuffling items
-	if argshuffle then 
-		local perm = torch.randperm(sids:size(1)):long()
-		X = X:index(1, perm) --TODO make sure this actually shuffles the data!
+	if argshuffle then
+		local perm = th.randperm(sids:size(1)):long()
+		X = X:index(1, perm)
 		y = y:index(1, perm)
-		sids = sids:index(1,perm)
+		sids = sids:index(1, perm)
 	end
 
 	--Creating table of included sub-indecies
-	local categorized_sids = {}
-	for i=0, 18 do
-		categorized_sids[i] = sids:eq(i):nonzero()
-		if categorized_sids[i]:size(1) < batch_size then
-			categorized_sids[i] = nil
-		end
-	end
+	local session_ids = {}
+    for i=0, 18 do
+        session_ids[i] = {}
+    end
+
+    for j=1, sids:view(-1):size(1) do
+        table.insert(session_ids[sids:view(-1)[{j}]], j)
+    end
+
+    for i=0, 18 do
+        if next(session_ids[i]) then
+            local printtmp = {}
+            for j=1, #session_ids[i] do
+                print(sids[session_ids[i][j]])
+            end
+        end
+    end
+
+	os.exit(0)
 
 	--Generating batches
 	local X_batches = {}
@@ -58,16 +71,23 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 			for key, value in pairs(categorized_sids) do
 				table.insert(all_indecies, key)
 			end
-			gen = torch.Generator()
-			cur_stream = all_indecies[torch.random(gen, 1, #all_indecies)]
+			gen = th.Generator()
+			cur_stream = all_indecies[th.random(gen, 1, #all_indecies)]
 
 			--Selecting the first few indecies of the respective queue
-			index_of_first_few = categorized_sids[cur_stream][{{1, batch_size}}]:type('torch.LongTensor')			
+			index_of_first_few = categorized_sids[cur_stream][{{1, batch_size}}]:type('th.LongTensor')			
 			--TODO make sure these operators are analgous for higher-sized tensors, this was only tested for sid			
-			tmp_x[i] = X:index(1, index_of_first_few:view(index_of_first_few:nElement()))
-			tmp_y[i] = y:index(1, index_of_first_few:view(index_of_first_few:nElement())) 
-			tmp_sid[i] = sids:index(1, index_of_first_few:view(index_of_first_few:nElement()))
-
+			deb1 = index_of_first_few
+			print("Deb1")
+			print(deb1)
+			print("X, y, sids shape")
+			print(X:size())
+			print(y:size())
+			print(sids:size())
+			tmp_x[i] = X[{{index_of_first_few},{}}]
+            tmp_y[i] = y[{{index_of_first_few}}]
+			tmp_sid[i] = sids[{{index_of_first_few}}]
+			os.exit(69)
 			--Modify or remove dictionary entry
 			local len = categorized_sids[cur_stream]:size(1)
 			if len - batch_size - 1 < batch_size then
@@ -87,6 +107,7 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 
 	print(sid_batches)
 
+
 	return X_batches, y_batches, sid_batches
 
 end
@@ -103,16 +124,12 @@ function BatchLoader.load_batch(X_batches, y_batches, sid_batches)
 		epoch_done = true
 	end
 
+	print("")
+
 	return Xout, yout, epoch_done
 
 end
 
-
-
+print("LOADED: BatchLoader.lua")
 
 return BatchLoader
-
-
-
-
-
