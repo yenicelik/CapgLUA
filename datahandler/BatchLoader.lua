@@ -7,13 +7,7 @@ local BatchLoader = {}
 BatchLoader.NUM_STREAMS = 10 --Outsource this
 BatchLoader.batch_counter = 1 --TODO: Do I need to make this local, such that this is contained in the file only?
 BatchLoader.no_of_batches = 0
-
--- HELPER FUNCTIONS
-local function tablelength(T)
-  local count = 0
-  for _ in pairs(T) do count = count + 1 end
-  return count
-end
+BatchLoader.epoch_done = false
 
 -- INITIALIZER
 function BatchLoader.init(X, y, sids, batch_size, argshuffle)
@@ -40,6 +34,7 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 	local y_batches = {}
 	local sid_batches = {}
 	local no_more_full_batches_left = false
+    local used_samples = 0
 
 	while not no_more_full_batches_left do
 		local tmp_x = {}
@@ -47,14 +42,6 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 		local tmp_sid = {}
 
 		for i=1, BatchLoader.NUM_STREAMS do
-
-			--Delete key if not enough (batch_size) samples existent to fill out all three parallel batches
-			if tablelength(session_ids) == 0 then
-                print("Max number of session_ids used\n\n")
-				no_more_full_batches_left = true
-				break
-			end
-
 			--Choose random key from dictionary
 			local possible_indecies = {}
 			for key, _ in pairs(session_ids) do
@@ -63,8 +50,15 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
                 end
 			end
 
+            --Delete key if not enough (batch_size) samples existent to fill out all three parallel batches
+            if  sids:view(-1):size(1) - used_samples < batch_size then
+                print("BatchLoader: Max number of session_ids used")
+                no_more_full_batches_left = true
+                break
+            end
+
             math.randomseed(os.time())
-			local cur_stream = possible_indecies[th.random(th.Generator(), 1, #possible_indecies)]
+            local cur_stream = possible_indecies[math.random(#possible_indecies)]
             local index_of_first_few = hf.take_n(batch_size, session_ids[cur_stream])
 
 			tmp_x[i] = X:index(1, th.LongTensor(index_of_first_few))
@@ -76,9 +70,13 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
                 sum = sum + #session_ids[j]
             end
 
+            used_samples = used_samples + batch_size
 		end
 
-        -- Putting the newly generated 'parallel' strem into a batch. BatchLoader.no_of_batches increases with every new batch we put in
+        -- Putting the newly generated 'parallel' strem into a batch.
+        -- BatchLoader.no_of_batches increases with every new batch we put in
+        -- This has the form [(Batch1), (Batch2)]
+        -- where Batch_i has the form (input_for_stream_1, .., input_for_stream_i, ..)
 		if not no_more_full_batches_left then
 			BatchLoader.no_of_batches = BatchLoader.no_of_batches + 1
 			X_batches[BatchLoader.no_of_batches] = tmp_x
@@ -87,30 +85,29 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 		end
 	end
 
-	print(sid_batches)
-
-    os.exit(69)
-
-
+    print("CREATED: All batches generated")
 	return X_batches, y_batches, sid_batches
 
 end
 
 -- LOADER FUNCTION
-function BatchLoader.load_batch(X_batches, y_batches, sid_batches)
-	
-	local epoch_done = false
-	local Xout = X_batches[batch_counter]
-	local yout = y_batches[batch_counter]
+function BatchLoader.load_batch(X_batches, y_batches)
+
+	local Xout = X_batches[BatchLoader.batch_counter]
+	local yout = y_batches[BatchLoader.batch_counter]
 
 	BatchLoader.batch_counter = BatchLoader.batch_counter + 1
 	if BatchLoader.batch_counter > BatchLoader.no_of_batches then
-		epoch_done = true
+		BatchLoader.epoch_done = true
+        BatchLoader.batch_counter = 1
 	end
 
-	print("")
+    print("Serving next batch: ")
+    print(#Xout)
+    print(#yout)
+    print(BatchLoader.epoch_done)
 
-	return Xout, yout, epoch_done
+	return Xout, yout
 
 end
 
