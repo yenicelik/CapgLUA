@@ -72,7 +72,7 @@ build_model = function(verbose)
 
     --Such that we don't apply a softmax operation twice
     local criterion = nil
-    if not arg.testing then
+    if arg.testing then
         model:add(nn.SoftMax())
     else
         --Any operation needed, and does this effectively replace the softmax option?
@@ -90,6 +90,8 @@ build_model = function(verbose)
 
 end
 
+return build_model
+
 --[[
 Some simple tests:
     - build the model
@@ -99,15 +101,15 @@ Some simple tests:
 --]]
 
 -- Generate random input
-local sample_batchsize = 2
-local sample_X = (th.rand(th.LongStorage{sample_batchsize, 1, 8, 16}))
-local sample_y = th.FloatTensor({3, 5}):view(-1)
+-- local sample_batchsize = 2
+-- local sample_X = (th.rand(th.LongStorage{sample_batchsize, 1, 8, 16}))
+-- local sample_y = th.FloatTensor({3, 5}):view(-1)
 
-local mod, crit, parameters, gradParameters = build_model(true)
+-- local mod, crit, parameters, gradParameters = build_model(true)
 
--- Feed-Forward
-local logits = mod:forward(sample_X)
-local loss = crit:forward(logits, sample_y)
+-- -- Feed-Forward
+-- local logits = mod:forward(sample_X)
+-- local loss = crit:forward(logits, sample_y)
 
 -- Feed-Backward (Backprop)
 

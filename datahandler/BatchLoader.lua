@@ -4,7 +4,7 @@ local hf = require "../helper.lua"
 
 local BatchLoader = {}
 -- Stuff
-BatchLoader.NUM_STREAMS = 10 --Outsource this
+BatchLoader.NUM_STREAMS = 8 --Outsource this
 BatchLoader.batch_counter = 1 --TODO: Do I need to make this local, such that this is contained in the file only?
 BatchLoader.no_of_batches = 0
 BatchLoader.epoch_done = false
@@ -102,8 +102,8 @@ function BatchLoader.load_batch(X_batches, y_batches)
         BatchLoader.batch_counter = 1
         print("EPOCH DONE: Batchloader.lua")
     end
-    return Xout, yout
 
+    return Xout, yout
 end
 
 print("LOADED: BatchLoader.lua")
