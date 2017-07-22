@@ -1,82 +1,82 @@
-local BatchLoader = {}
+local th = require "torch"
+require "../config.lua"
+local hf = require "../helper.lua"
 
-BatchLoader.NUM_STREAMS = 3
+local BatchLoader = {}
+-- Stuff
+BatchLoader.NUM_STREAMS = 10 --Outsource this
 BatchLoader.batch_counter = 1 --TODO: Do I need to make this local, such that this is contained in the file only?
 BatchLoader.no_of_batches = 0
-
--- HELPER FUNCTIONS
-local function tablelength(T)
-  local count = 0
-  for _ in pairs(T) do count = count + 1 end
-  return count
-end
+BatchLoader.epoch_done = false
 
 -- INITIALIZER
 function BatchLoader.init(X, y, sids, batch_size, argshuffle)
-	
 	--Shuffling items
-	if argshuffle then 
-		local perm = torch.randperm(sids:size(1)):long()
-		X = X:index(1, perm) --TODO make sure this actually shuffles the data!
+	if argshuffle then
+		local perm = th.randperm(sids:size(1)):long()
+		X = X:index(1, perm)
 		y = y:index(1, perm)
-		sids = sids:index(1,perm)
+		sids = sids:index(1, perm)
 	end
 
 	--Creating table of included sub-indecies
-	local categorized_sids = {}
-	for i=0, 18 do
-		categorized_sids[i] = sids:eq(i):nonzero()
-		if categorized_sids[i]:size(1) < batch_size then
-			categorized_sids[i] = nil
-		end
-	end
+	local session_ids = {}
+    for i=0, 18 do
+        session_ids[i] = {}
+    end
+
+    for j=1, sids:view(-1):size(1) do
+        table.insert(session_ids[sids:view(-1)[{j}]], j)
+    end
 
 	--Generating batches
 	local X_batches = {}
 	local y_batches = {}
 	local sid_batches = {}
 	local no_more_full_batches_left = false
+    local used_samples = 0
 
 	while not no_more_full_batches_left do
-		
 		local tmp_x = {}
 		local tmp_y = {}
 		local tmp_sid = {}
-		local cur_random_stream
 
-		for i=1, BatchLoader.NUM_STREAMS do 
-
-			--TODO check if enough batches exist
-			--Delete key if not enough (batch_size) samples existent
-			if tablelength(categorized_sids) == 0 then
-				no_more_full_batches_left = true
-				break
-			end
-			
+		for i=1, BatchLoader.NUM_STREAMS do
 			--Choose random key from dictionary
-			local all_indecies = {}
-			for key, value in pairs(categorized_sids) do
-				table.insert(all_indecies, key)
+			local possible_indecies = {}
+			for key, _ in pairs(session_ids) do
+                if next(session_ids[key]) then
+				    table.insert(possible_indecies, key)
+                end
 			end
-			gen = torch.Generator()
-			cur_stream = all_indecies[torch.random(gen, 1, #all_indecies)]
 
-			--Selecting the first few indecies of the respective queue
-			index_of_first_few = categorized_sids[cur_stream][{{1, batch_size}}]:type('torch.LongTensor')			
-			--TODO make sure these operators are analgous for higher-sized tensors, this was only tested for sid			
-			tmp_x[i] = X:index(1, index_of_first_few:view(index_of_first_few:nElement()))
-			tmp_y[i] = y:index(1, index_of_first_few:view(index_of_first_few:nElement())) 
-			tmp_sid[i] = sids:index(1, index_of_first_few:view(index_of_first_few:nElement()))
+            --Delete key if not enough (batch_size) samples existent to fill out all three parallel batches
+            if  sids:view(-1):size(1) - used_samples < batch_size then
+                print("BatchLoader: Max number of session_ids used")
+                no_more_full_batches_left = true
+                break
+            end
 
-			--Modify or remove dictionary entry
-			local len = categorized_sids[cur_stream]:size(1)
-			if len - batch_size - 1 < batch_size then
-				categorized_sids[cur_stream] = nil
-			else
-				categorized_sids[cur_stream] = categorized_sids[cur_stream][{{batch_size+1, len}}]	
-			end
+            math.randomseed(os.time())
+            local cur_stream = possible_indecies[math.random(#possible_indecies)]
+            local index_of_first_few = hf.take_n(batch_size, session_ids[cur_stream])
+
+			tmp_x[i] = X:index(1, th.LongTensor(index_of_first_few))
+            tmp_y[i] = y:index(1, th.LongTensor(index_of_first_few))
+			tmp_sid[i] = sids:index(1, th.LongTensor(index_of_first_few))
+
+            local sum = 0
+            for j=1, #session_ids do
+                sum = sum + #session_ids[j]
+            end
+
+            used_samples = used_samples + batch_size
 		end
 
+        -- Putting the newly generated 'parallel' strem into a batch.
+        -- BatchLoader.no_of_batches increases with every new batch we put in
+        -- This has the form [(Batch1), (Batch2)]
+        -- where Batch_i has the form (input_for_stream_1, .., input_for_stream_i, ..)
 		if not no_more_full_batches_left then
 			BatchLoader.no_of_batches = BatchLoader.no_of_batches + 1
 			X_batches[BatchLoader.no_of_batches] = tmp_x
@@ -85,34 +85,32 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 		end
 	end
 
-	print(sid_batches)
-
+    print("CREATED: All batches generated")
 	return X_batches, y_batches, sid_batches
 
 end
 
 -- LOADER FUNCTION
-function BatchLoader.load_batch(X_batches, y_batches, sid_batches)
-	
-	local epoch_done = false
-	local Xout = X_batches[batch_counter]
-	local yout = y_batches[batch_counter]
+function BatchLoader.load_batch(X_batches, y_batches)
+
+	local Xout = X_batches[BatchLoader.batch_counter]
+	local yout = y_batches[BatchLoader.batch_counter]
 
 	BatchLoader.batch_counter = BatchLoader.batch_counter + 1
 	if BatchLoader.batch_counter > BatchLoader.no_of_batches then
-		epoch_done = true
+		BatchLoader.epoch_done = true
+        BatchLoader.batch_counter = 1
 	end
 
-	return Xout, yout, epoch_done
+    print("Serving next batch: ")
+    print(#Xout)
+    print(#yout)
+    print(BatchLoader.epoch_done)
+
+	return Xout, yout
 
 end
 
-
-
+print("LOADED: BatchLoader.lua")
 
 return BatchLoader
-
-
-
-
-
