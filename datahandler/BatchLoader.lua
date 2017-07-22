@@ -75,8 +75,6 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 
         -- Putting the newly generated 'parallel' strem into a batch.
         -- BatchLoader.no_of_batches increases with every new batch we put in
-        -- This has the form [(Batch1), (Batch2)]
-        -- where Batch_i has the form (input_for_stream_1, .., input_for_stream_i, ..)
         if not no_more_full_batches_left then
             BatchLoader.no_of_batches = BatchLoader.no_of_batches + 1
             X_batches[BatchLoader.no_of_batches] = tmp_x
@@ -85,6 +83,8 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
         end
     end
 
+    -- The output has the form [(Batch1), (Batch2)]
+    -- where Batch_i has the form (input_for_stream_1, .., input_for_stream_i, ..)
     print("CREATED: All batches generated")
     return X_batches, y_batches, sid_batches
 
@@ -100,13 +100,8 @@ function BatchLoader.load_batch(X_batches, y_batches)
     if BatchLoader.batch_counter > BatchLoader.no_of_batches then
         BatchLoader.epoch_done = true
         BatchLoader.batch_counter = 1
+        print("EPOCH DONE: Batchloader.lua")
     end
-
-    print("Serving next batch: ")
-    print(#Xout)
-    print(#yout)
-    print(BatchLoader.epoch_done)
-
     return Xout, yout
 
 end

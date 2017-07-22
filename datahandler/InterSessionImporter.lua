@@ -102,7 +102,7 @@ end
 
 
 -- MAIN FUNCTION
-function InterSessionImporter.init(data_parent_dir, dev)
+function InterSessionImporter.init(data_parent_dir)
     -- Default arguments
     data_parent_dir = data_parent_dir or "../Datasets/Preprocessed/DB-a"
 
