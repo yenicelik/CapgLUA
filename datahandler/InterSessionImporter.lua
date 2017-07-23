@@ -2,15 +2,12 @@ local th = require "torch"
 local lfs = require 'lfs'
 --local inspect = require('inspect')
 local matio = require 'matio'
-local nn = require "nn"
 local arg = require '../config.lua'
+th.setdefaulttensortype('torch.FloatTensor')
+
 
 local InterSessionImporter = {}
-
 InterSessionImporter.NUM_GESTURES = 8
-local NUM_GESTURES = 8
-
-th.setdefaulttensortype('torch.FloatTensor')
 
 -- HELPER FUNCTIONS
 local function concat(t1, t2)

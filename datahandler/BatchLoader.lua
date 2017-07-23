@@ -2,16 +2,20 @@ local th = require "torch"
 require "../config.lua"
 local hf = require "../helper.lua"
 
-local BatchLoader = {}
--- Stuff
-BatchLoader.NUM_STREAMS = 8 --Outsource this
-BatchLoader.batch_counter = 1 --TODO: Do I need to make this local, such that this is contained in the file only?
-BatchLoader.no_of_batches = 0
-BatchLoader.epoch_done = false
+BatchLoader = {NUM_STREAMS = 8, batch_counter = 1, no_of_batches = 0, epoch_done = false}
+BatchLoader.__index = BatchLoader
 
--- INITIALIZER
-function BatchLoader.init(X, y, sids, batch_size, argshuffle)
-    --Shuffling items
+function BatchLoader:new()
+    local self = setmetatable({}, BatchLoader)
+    self.NUM_STREAMS = 8
+    self.batch_counter = 1
+    self.no_of_batches = 0
+    self.epoch_done = false
+    return self
+end
+
+function BatchLoader:init(X, y, sids, batch_size, argshuffle)
+
     if argshuffle then
         local perm = th.randperm(sids:size(1)):long()
         X = X:index(1, perm)
@@ -41,11 +45,11 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
         local tmp_y = {}
         local tmp_sid = {}
 
-        for i=1, BatchLoader.NUM_STREAMS do
+        for i=1, self.NUM_STREAMS do
             --Choose random key from dictionary
             local possible_indecies = {}
             for key, _ in pairs(session_ids) do
-                if next(session_ids[key]) then
+                if next(session_ids[key]) and #session_ids[key] >= batch_size then
                     table.insert(possible_indecies, key)
                 end
             end
@@ -76,10 +80,10 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
         -- Putting the newly generated 'parallel' strem into a batch.
         -- BatchLoader.no_of_batches increases with every new batch we put in
         if not no_more_full_batches_left then
-            BatchLoader.no_of_batches = BatchLoader.no_of_batches + 1
-            X_batches[BatchLoader.no_of_batches] = tmp_x
-            y_batches[BatchLoader.no_of_batches] = tmp_y
-            sid_batches[BatchLoader.no_of_batches] = tmp_sid
+            self.no_of_batches = self.no_of_batches + 1
+            X_batches[self.no_of_batches] = tmp_x
+            y_batches[self.no_of_batches] = tmp_y
+            sid_batches[self.no_of_batches] = tmp_sid
         end
     end
 
@@ -90,22 +94,17 @@ function BatchLoader.init(X, y, sids, batch_size, argshuffle)
 
 end
 
--- LOADER FUNCTION
-function BatchLoader.load_batch(X_batches, y_batches)
+function BatchLoader:load_batch(X_batches, y_batches)
 
-    local Xout = X_batches[BatchLoader.batch_counter]
-    local yout = y_batches[BatchLoader.batch_counter]
+    local Xout = X_batches[self.batch_counter]
+    local yout = y_batches[self.batch_counter]
 
-    BatchLoader.batch_counter = BatchLoader.batch_counter + 1
-    if BatchLoader.batch_counter > BatchLoader.no_of_batches then
-        BatchLoader.epoch_done = true
-        BatchLoader.batch_counter = 1
-        print("EPOCH DONE: Batchloader.lua")
+    self.batch_counter = self.batch_counter + 1
+    if self.batch_counter > self.no_of_batches then
+        self.epoch_done = true
+        self.batch_counter = 1
     end
 
     return Xout, yout
 end
-
-print("LOADED: BatchLoader.lua")
-
 return BatchLoader
