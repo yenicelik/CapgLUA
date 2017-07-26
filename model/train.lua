@@ -10,9 +10,7 @@ local BatchLoader = require "../datahandler/BatchLoader.lua"
 local X_data, y_data, sid_data = interSessionImporter.init()
 
 --New BatchLoader for Train, CV, Test
-local trainLoader = BatchLoader:new()
-local cvLoader = BatchLoader:new()
-local testLoader = BatchLoader:new()
+local batchLoader = BatchLoader:new()
 
 -- Boundaries
 local n = X_data:size(1)
@@ -24,28 +22,14 @@ print(b)
 print(n)
 print("At train")
 
-local X_train, y_train, sid_train = trainLoader:init(
-	X_data[{{1, a}, {}, {}}],
-	y_data[{{1, a}, {}}],
-	sid_data[{{1, a}, {}}],
-	10, true
+local X_train, y_train, sid_train, X_cv, y_cv, sid_cv, X_test, y_test, sid_test = batchLoader:init(
+		X_data,
+		y_data,
+		sid_data,
+		10, true
 )
 
-print("At cv")
-local X_cv, y_cv, sid_cv = cvLoader.init(
-	cvLoader,
-	X_data[{{a, b}, {}, {}}],
-	y_data[{{a, b}, {}}],
-	sid_data[{{a, b}, {}}],
-	arg.batchsize, false
-)
 
-print("At test")
-local X_test, y_test, sid_test = testLoader:init(
-	X_data[{{b, n}, {}, {}}],
-	y_data[{{b, n}, {}}],
-	sid_data[{{b, n}, {}}], arg.batchsize, true
-)
 --Moving the following function to the top create a bug, where the test-set and cv-set is empty!
 local lmodel, lcriterion, lparameters, lgradParameters = build_model(true)
 
@@ -60,11 +44,11 @@ for epoch=1, arg.epochs do
 
 	local trainConfusion = optim.ConfusionMatrix(classes)
 
-	while not trainLoader.epoch_done do
-	    local xBs, yBs = trainLoader:load_batch(X_train, y_train, sid_train)
+	while not batchLoader.epoch_done do
+	    local xBs, yBs = batchLoader:load_batch(X_train, y_train, sid_train)
 	    xlua.progress(
-	        trainLoader.batch_counter,
-	        trainLoader.no_of_batches
+	        batchLoader.batch_counter,
+	        batchLoader.no_of_batches
 	    )
 
 	    local inputs = xBs[1]:view(-1, 1, 8, 16)
@@ -108,13 +92,13 @@ for epoch=1, arg.epochs do
 
 		optim.sgd(feval, lparameters, sgdState)
 
-		if trainLoader.batch_counter % tonumber(arg.cvEvery) == 0 then
+		if batchLoader.batch_counter % tonumber(arg.cvEvery) == 0 then
             print("Cross-Validating...")
 
 			local cvConfusion = optim.ConfusionMatrix(classes)
 
-		    while not cvLoader.epoch_done do
-		        local xCV, yCV = cvLoader:load_batch(X_cv, y_cv, sid_cv)
+		    while not batchLoader.epoch_cv_done do
+		        local xCV, yCV = batchLoader:load_cvbatch(X_cv, y_cv, sid_cv)
 
 		        local cv_input = xBs[1]:view(-1, 1, 8, 16)
 	            local cv_target = yBs[1]:view(-1)
@@ -131,18 +115,18 @@ for epoch=1, arg.epochs do
 		    print("Mean class accuracy (CV) is: " .. tostring(cvConfusion.totalValid * 100))
 		    print(trainConfusion)
 		    print("Mean class accuracy (Train) is: " .. tostring(trainConfusion.totalValid * 100))
-		    cvLoader.epoch_done = false
+		    batchLoader.epoch_cv_done = false
 		end
 	end
 
-	trainLoader.epoch_done = false
+	batchLoader.epoch_done = false
 end
 
 local testConfusion = optim.ConfusionMatrix(classes)
 
 print("Running tests...")
-while not testLoader.epoch_done do
-	local xTest, yTest = testLoader:load_batch(X_test, y_test, sid_test)
+while not batchLoader.epoch_test_done do
+	local xTest, yTest = batchLoader:load_test_batch(X_test, y_test, sid_test)
 
 	local test_input = xTest[1]:view(-1, 1, 8, 16)
 	local test_target = yTest[1]:view(-1)

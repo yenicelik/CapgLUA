@@ -108,7 +108,6 @@ function InterSessionImporter.init(data_parent_dir)
     local X, y, sids = get_X_y_sid_from_data(filepaths)
 
     print("DATA LOADED: InterSessionImporter.lua")
-
     return X, y, sids
 
 end
