@@ -28,7 +28,7 @@ local X_train, y_train, sid_train = trainLoader:init(
 	X_data[{{1, a}, {}, {}}],
 	y_data[{{1, a}, {}}],
 	sid_data[{{1, a}, {}}],
-	10, true
+	arg.batchsize, true
 )
 
 print("At cv")
@@ -44,7 +44,8 @@ print("At test")
 local X_test, y_test, sid_test = testLoader:init(
 	X_data[{{b, n}, {}, {}}],
 	y_data[{{b, n}, {}}],
-	sid_data[{{b, n}, {}}], arg.batchsize, true
+	sid_data[{{b, n}, {}}],
+	arg.batchsize, true
 )
 --Moving the following function to the top create a bug, where the test-set and cv-set is empty!
 local lmodel, lcriterion, lparameters, lgradParameters = build_model(true)
@@ -61,14 +62,11 @@ for epoch=1, arg.epochs do
 	local trainConfusion = optim.ConfusionMatrix(classes)
 
 	while not trainLoader.epoch_done do
-	    local xBs, yBs = trainLoader:load_batch(X_train, y_train, sid_train)
+	    local inputs, targets = trainLoader:load_batch(X_train, y_train, sid_train)
 	    xlua.progress(
 	        trainLoader.batch_counter,
 	        trainLoader.no_of_batches
 	    )
-
-	    local inputs = xBs[1]:view(-1, 1, 8, 16)
-	    local targets = yBs[1]:view(-1)
 
 		local feval = function(x)
 		    collectgarbage()
@@ -100,7 +98,7 @@ for epoch=1, arg.epochs do
 		    return loss, lgradParameters
 		end
 
-		sgdState = sgdState or {
+		local sgdState = sgdState or {
 			learningRate = arg.learningRate,
 			momentum = arg.momentum,
 			learningRateDevay = 0
@@ -114,10 +112,7 @@ for epoch=1, arg.epochs do
 			local cvConfusion = optim.ConfusionMatrix(classes)
 
 		    while not cvLoader.epoch_done do
-		        local xCV, yCV = cvLoader:load_batch(X_cv, y_cv, sid_cv)
-
-		        local cv_input = xBs[1]:view(-1, 1, 8, 16)
-	            local cv_target = yBs[1]:view(-1)
+		        local cv_input, cv_target = cvLoader:load_batch(X_cv, y_cv, sid_cv)
 
 	            arg.testing = true
 		        local preds = lmodel:forward(cv_input)
@@ -142,10 +137,7 @@ local testConfusion = optim.ConfusionMatrix(classes)
 
 print("Running tests...")
 while not testLoader.epoch_done do
-	local xTest, yTest = testLoader:load_batch(X_test, y_test, sid_test)
-
-	local test_input = xTest[1]:view(-1, 1, 8, 16)
-	local test_target = yTest[1]:view(-1)
+	local test_input, test_target = testLoader:load_batch(X_test, y_test, sid_test)
 
 	arg.testing = true
 	local preds = lmodel:forward(test_input)

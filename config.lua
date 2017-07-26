@@ -6,13 +6,14 @@ arg = nil
 if not arg then
     arg = {
         numgestures     = 8,                 --number of gestures we use
+        numstreams      = 10,                --how many streams to
         dropout         = 0.5,               --passing dropout probability
         coefL2          = 0.001,             --L2 penalty on the weights
         batchsize       = 10,                --batch size
         learningRate    = 0.01,              --learning rate
         weightDecay     = 0.001,             --L1/L2 weight decay factor
         momentum        = 1,                 --sgd momentum factor
-        devLength       = 300,               --how many files should be read for dev-mode
+        devLength       = 30,               --how many files should be read for dev-mode
         --For parameter 'dev': false gives me a string, true gives me a boolean...
         dev             = true,              --use the full dataset (not testing model)
         testing         = false,             --true if recognition/testing phase
@@ -21,7 +22,7 @@ if not arg then
         trainSplit      = 0.5,               --percentage of data to use for training
         cvSplit         = 0.1,               --percentage of data to use for cross-validation
         testSplit       = 0.4,               --percentage of data to use for testing (final model evaluation)
-        cvEvery         = 900,                 --how often to cross-validate
+        cvEvery         = 100,                 --how often to cross-validate
         epochs          = 5,                --total number of epochs to run
 
     }
