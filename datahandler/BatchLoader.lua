@@ -66,7 +66,7 @@ function BatchLoader:init(X, y, sids, batch_size, argshuffle)
             local possible_indecies = {}
             for key, _ in pairs(session_ids) do
                 if next(session_ids[key]) and #session_ids[key] >= batch_size and
-                    key ~= 2 and key ~= 11 and key ~= 5 and key ~= 8 then
+                    key ~= 2 and key ~= 5 then
                     table.insert(possible_indecies, key)
                 end
             end
