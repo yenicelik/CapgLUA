@@ -3,6 +3,7 @@ local nn = require 'nn'
 require 'pl'
 require '../config.lua'
 require '../main.lua'
+require 'net-toolkit'
 
 th.setdefaulttensortype('torch.FloatTensor')
 --[[
@@ -90,7 +91,14 @@ build_model = function(verbose)
 
 end
 
-return build_model
+load_model = function()
+    local model = th.load(arg.modelFilename)
+    local criterion = nn.CrossEntropyCriterion()
+
+    local parameters, gradParameters = model:getParameters()
+
+    return model, criterion, parameters, gradParameters
+end
 
 --[[
 Some simple tests:

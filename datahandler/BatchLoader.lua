@@ -216,5 +216,3 @@ function BatchLoader:load_test_batch(X_test_batches, y_test_batches)
 
     return Xout, yout
 end
-
-return BatchLoader

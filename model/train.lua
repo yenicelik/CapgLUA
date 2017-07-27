@@ -1,11 +1,9 @@
 require "../config.lua"
-local th = require "torch"
-local grad = require "autograd"
-local interSessionImporter = require "../datahandler/InterSessionImporter"
-local build_model = require "./build_model.lua"
+require "./build_model.lua"
+require "../datahandler/BatchLoader.lua"
 require "optim"
-
-local BatchLoader = require "../datahandler/BatchLoader.lua"
+local interSessionImporter = require "../datahandler/InterSessionImporter"
+local th = require('torch')
 
 local X_data, y_data, sid_data = interSessionImporter.init()
 
@@ -31,9 +29,15 @@ local X_train, y_train, sid_train, X_cv, y_cv, sid_cv, X_test, y_test, sid_test 
 
 
 --Moving the following function to the top create a bug, where the test-set and cv-set is empty!
-local lmodel, lcriterion, lparameters, lgradParameters = build_model(true)
+local lmodel, lcriterion, lparameters, lgradParameters
+if arg.useExistingModel then
+	print("Loading model from memory...")
+    lmodel, lcriterion, lparameters, lgradParameters = load_model()
+else
+    lmodel, lcriterion, lparameters, lgradParameters = build_model(true)
+end
 
-classes = {}
+local classes = {}
 for i=1, tonumber(8) do
 	table.insert(classes, i)
 end
@@ -54,6 +58,7 @@ for epoch=1, arg.epochs do
 	    local inputs = xBs[1]:view(-1, 1, 8, 16)
 	    local targets = yBs[1]:view(-1)
 
+	    local sgdState
 		local feval = function(x)
 		    collectgarbage()
 
@@ -79,7 +84,7 @@ for epoch=1, arg.epochs do
 
 		    for i = 1, tonumber(arg.batchsize) do
 	            trainConfusion:add(logits[i], targets[i])
-	         end
+	        end
 
 		    return loss, lgradParameters
 		end
@@ -93,8 +98,13 @@ for epoch=1, arg.epochs do
 		optim.sgd(feval, lparameters, sgdState)
 
 		if batchLoader.batch_counter % tonumber(arg.cvEvery) == 0 then
-            print("Cross-Validating...")
 
+			if arg.saveModel then
+			    print("Saving model... ")
+			    th.save(arg.modelFilename, lmodel)
+			end
+
+            print("Cross-Validating...")
 			local cvConfusion = optim.ConfusionMatrix(classes)
 
 		    while not batchLoader.epoch_cv_done do
