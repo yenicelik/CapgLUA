@@ -16,7 +16,7 @@ if not arg then
         devLength       = 30,               --how many files should be read for dev-mode
         --For parameter 'dev': false gives me a string, true gives me a boolean...
         dev             = true,              --use the full dataset (not testing model)
-        testing         = false,             --true if recognition/testing phase
+        testing         = true,             --true if recognition/testing phase
         cuda            = false,             --whether we use cuda or not
         shuffleDevSet   = true,              --shuffle the development set
         trainSplit      = 0.5,               --percentage of data to use for training
@@ -26,6 +26,10 @@ if not arg then
         epochs          = 5,                --total number of epochs to run
 
     }
+end
+
+if arg.testing then
+    arg.dropout = 0.0
 end
 
 --trainSplit, cvSplit and testSplit should sum to 1

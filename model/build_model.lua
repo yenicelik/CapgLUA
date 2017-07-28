@@ -117,7 +117,6 @@ local function affine_out(stream, inputDim, outputDim)
 end
 
 
-
 build_model = function(verbose)
 
     --Input Layer
@@ -128,11 +127,8 @@ build_model = function(verbose)
         h1[i] = nn.SpatialBatchNormalization(1, nil, 0.9)(inp[i])
     end
 
-
     --Layer1: Conv1 (64, stride=1, 3x3) --Check what exactly was implemented before this!
     h1 = conv_layer(h1, 1, 64)
-
-
     -- --Layer2: Conv2 (64, stride=1, 3x3)
     h1 = conv_layer(h1, 64, 64)
 
@@ -153,23 +149,18 @@ build_model = function(verbose)
     -- --Layer7: Affine3 (128 units)
     h1 = affine_layer(h1, 512, 128)
 
-
     -- --Output: Affine4 (8 units)
     local output = affine_out(h1, 128, arg.numgestures)
-
     output = nn.JoinTable(1, arg.numgestures)(output)
-
     local criterion = nn.CrossEntropyCriterion()
 
     local g = nn.gModule(inp, {output})
+    local parameters, gradParameters = g:getParameters()
 
     if verbose then
         graph.dot(g.fg, 'fancy', 'fancy')
         print(g)
     end
-
-    local parameters, gradParameters = g:getParameters()
-
 
     return g, criterion, parameters, gradParameters
 
