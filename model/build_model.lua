@@ -4,7 +4,10 @@ require 'nngraph'
 require 'pl'
 require '../config.lua'
 require '../main.lua'
-require 'net-toolkit'
+
+if arg.useCuda then
+	require "cunn"
+end
 
 th.setdefaulttensortype('torch.FloatTensor')
 --[[
@@ -166,7 +169,13 @@ build_model = function(verbose)
 
     local g = nn.gModule(inp, {output})
     local parameters, gradParameters = g:getParameters()
-
+	
+	if arg.useCuda then
+		criterion = criterion:cuda()
+		parameters = parameters:cuda()
+		gradParameters = gradParameters:cuda()
+		g = g:cuda()
+	end
     if verbose then
         graph.dot(g.fg, 'fancy', 'fancy')
         print(g)
@@ -178,9 +187,15 @@ end
 
 load_model = function()
     local model = th.load(arg.modelFilename)
+    local parameters, gradParameters = model:getParameters()
     local criterion = nn.CrossEntropyCriterion()
 
-    local parameters, gradParameters = model:getParameters()
+	if arg.useCuda then
+		criterion = criterion:cuda()
+		parameters = parameters:cuda()
+		gradParameters = gradParameters:cuda()
+		model = model:cuda()
+	end
 
     return model, criterion, parameters, gradParameters
 end

@@ -9,25 +9,25 @@ if not arg then
         numstreams      = 10,                --how many streams to
         dropout         = 0.5,               --passing dropout probability
         coefL2          = 0.001,             --L2 penalty on the weights
-        batchsize       = 10,                --batch size
+        batchsize       = 100,                --batch size
         learningRate    = 0.01,              --learning rate
         weightDecay     = 0.001,             --L1/L2 weight decay factor
         momentum        = 1,                 --sgd momentum factor
-        devLength       = 40,                --how many files should be read for dev-mode. Make this about 40 minimum such that one from the test and cv classes are included!
+        devLength       = 500,                --how many files should be read for dev-mode. Make this about 40 minimum such that one from the test and cv classes are included!
         --For parameter 'dev': false gives me a string, true gives me a boolean...
-        dev             = true,              --use the full dataset (not testing model)
+        dev             =false,              --use the full dataset (not testing model)
         testing         = true,              --true if recognition/testing phase
         cuda            = false,             --whether we use cuda or not
         shuffleDevSet   = true,              --shuffle the development set
         trainSplit      = 0.5,               --percentage of data to use for training
         cvSplit         = 0.1,               --percentage of data to use for cross-validation
         testSplit       = 0.4,               --percentage of data to use for testing (final model evaluation)
-        cvEvery         =  200,               --how often to cross-validate
+        cvEvery         = 9000,               --how often to cross-validate
         epochs          = 2,                 --total number of epochs to run
         modelFilename   = "./test.model",    --path where an existing model is saved or loaded
         saveModel       = true,              --whether to save model or not
         useExistingModel= false,             --Whether to use existing model
-        useCuda         = false              --Whether to use cuda or not
+        useCuda         = true               --Whether to use cuda or not
     }
 end
 
