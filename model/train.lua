@@ -1,18 +1,14 @@
 require "../config.lua"
-local th = require "torch"
-local grad = require "autograd"
-local interSessionImporter = require "../datahandler/InterSessionImporter"
-local build_model = require "./build_model.lua"
+require "./build_model.lua"
+require "../datahandler/BatchLoader.lua"
 require "optim"
-
-local BatchLoader = require "../datahandler/BatchLoader.lua"
+local interSessionImporter = require "../datahandler/InterSessionImporter"
+local th = require('torch')
 
 local X_data, y_data, sid_data = interSessionImporter.init()
 
 --New BatchLoader for Train, CV, Test
-local trainLoader = BatchLoader:new()
-local cvLoader = BatchLoader:new()
-local testLoader = BatchLoader:new()
+local batchLoader = BatchLoader:new()
 
 -- Boundaries
 local n = X_data:size(1)
@@ -24,33 +20,24 @@ print(b)
 print(n)
 print("At train")
 
-local X_train, y_train, sid_train = trainLoader:init(
-	X_data[{{1, a}, {}, {}}],
-	y_data[{{1, a}, {}}],
-	sid_data[{{1, a}, {}}],
-	arg.batchsize, true
+
+local X_train, y_train, sid_train, X_cv, y_cv, sid_cv, X_test, y_test, sid_test = batchLoader:init(
+		X_data,
+		y_data,
+		sid_data,
+		10, true
 )
 
-print("At cv")
-local X_cv, y_cv, sid_cv = cvLoader.init(
-	cvLoader,
-	X_data[{{a, b}, {}, {}}],
-	y_data[{{a, b}, {}}],
-	sid_data[{{a, b}, {}}],
-	arg.batchsize, false
-)
-
-print("At test")
-local X_test, y_test, sid_test = testLoader:init(
-	X_data[{{b, n}, {}, {}}],
-	y_data[{{b, n}, {}}],
-	sid_data[{{b, n}, {}}],
-	arg.batchsize, true
-)
 --Moving the following function to the top create a bug, where the test-set and cv-set is empty!
-local lmodel, lcriterion, lparameters, lgradParameters = build_model(true)
+local lmodel, lcriterion, lparameters, lgradParameters
+if arg.useExistingModel then
+	print("Loading model from memory...")
+    lmodel, lcriterion, lparameters, lgradParameters = load_model()
+else
+    lmodel, lcriterion, lparameters, lgradParameters = build_model(true)
+end
 
-classes = {}
+local classes = {}
 for i=1, tonumber(8) do
 	table.insert(classes, i)
 end
@@ -61,13 +48,14 @@ for epoch=1, arg.epochs do
 
 	local trainConfusion = optim.ConfusionMatrix(classes)
 
-	while not trainLoader.epoch_done do
-	    local inputs, targets = trainLoader:load_batch(X_train, y_train, sid_train)
+	while not batchLoader.epoch_done do
+	    local inputs, targets = batchLoader:load_batch(X_train, y_train, sid_train)
 	    xlua.progress(
-	        trainLoader.batch_counter,
-	        trainLoader.no_of_batches
+	        batchLoader.batch_counter,
+	        batchLoader.no_of_batches
 	    )
-
+    
+	    local sgdState
 		local feval = function(x)
 		    collectgarbage()
 
@@ -93,7 +81,7 @@ for epoch=1, arg.epochs do
 
 		    for i = 1, tonumber(arg.batchsize) do
 	            trainConfusion:add(logits[i], targets[i])
-	         end
+	        end
 
 		    return loss, lgradParameters
 		end
@@ -106,13 +94,21 @@ for epoch=1, arg.epochs do
 
 		optim.sgd(feval, lparameters, sgdState)
 
-		if trainLoader.batch_counter % tonumber(arg.cvEvery) == 0 then
-            print("Cross-Validating...")
+		if batchLoader.batch_counter % tonumber(arg.cvEvery) == 0 then
 
+			if arg.saveModel then
+			    print("Saving model... ")
+			    th.save(arg.modelFilename, lmodel)
+			end
+
+            print("Cross-Validating...")
 			local cvConfusion = optim.ConfusionMatrix(classes)
 
 		    while not cvLoader.epoch_done do
 		        local cv_input, cv_target = cvLoader:load_batch(X_cv, y_cv, sid_cv)
+
+        while not batchLoader.epoch_cv_done do
+		        local cv_input, cv_target = batchLoader:load_cvbatch(X_cv, y_cv, sid_cv)
 
 	            arg.testing = true
 		        local preds = lmodel:forward(cv_input)
@@ -126,18 +122,19 @@ for epoch=1, arg.epochs do
 		    print("Mean class accuracy (CV) is: " .. tostring(cvConfusion.totalValid * 100))
 		    print(trainConfusion)
 		    print("Mean class accuracy (Train) is: " .. tostring(trainConfusion.totalValid * 100))
-		    cvLoader.epoch_done = false
+		    batchLoader.epoch_cv_done = false
 		end
 	end
 
-	trainLoader.epoch_done = false
+	batchLoader.epoch_done = false
 end
 
 local testConfusion = optim.ConfusionMatrix(classes)
 
 print("Running tests...")
-while not testLoader.epoch_done do
-	local test_input, test_target = testLoader:load_batch(X_test, y_test, sid_test)
+while not batchLoader.epoch_test_done do
+	local test_input, test_target = batchLoader:load_test_batch(X_test, y_test, sid_test)
+
 
 	arg.testing = true
 	local preds = lmodel:forward(test_input)
