@@ -188,6 +188,13 @@ function BatchLoader:load_batch(X_batches, y_batches)
         self.batch_counter = 1
     end
 
+    if arg.useCuda then
+        for i=1, #Xout do
+            Xout[i] = Xout[i]:cuda()
+        end
+        return Xout, th.cat(yout, 1):cuda()
+    end
+
     return Xout, th.cat(yout, 1)
 end
 
@@ -201,6 +208,13 @@ function BatchLoader:load_cvbatch(X_cv_batches, y_cv_batches)
         self.batch_cv_counter = 1
     end
 
+    if arg.useCuda then
+        for i=1, #Xout do
+            Xout[i] = Xout[i]:cuda()
+        end
+        return Xout, th.cat(yout, 1):cuda()
+    end
+
     return Xout, th.cat(yout, 1)
 end
 
@@ -212,6 +226,13 @@ function BatchLoader:load_test_batch(X_test_batches, y_test_batches)
     if self.batch_test_counter > self.no_of_test_batches then
         self.epoch_test_done = true
         self.batch_test_counter = 1
+    end
+
+    if arg.useCuda then
+        for i=1, #Xout do
+            Xout[i] = Xout[i]:cuda()
+        end
+        return Xout, th.cat(yout, 1):cuda()
     end
 
     return Xout, th.cat(yout, 1)

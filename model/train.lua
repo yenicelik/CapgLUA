@@ -4,6 +4,9 @@ require "../datahandler/BatchLoader.lua"
 require "optim"
 local interSessionImporter = require "../datahandler/InterSessionImporter"
 local th = require('torch')
+if arg.useCuda then
+	require "cunn"
+end
 
 local X_data, y_data, sid_data = interSessionImporter.init()
 
@@ -35,6 +38,11 @@ if arg.useExistingModel then
     lmodel, lcriterion, lparameters, lgradParameters = load_model()
 else
     lmodel, lcriterion, lparameters, lgradParameters = build_model(true)
+end
+
+if arg.useCuda then
+	print("Using CUDA...")
+	lmodel = lmodel:cuda()
 end
 
 local classes = {}
