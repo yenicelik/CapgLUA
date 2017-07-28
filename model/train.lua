@@ -25,7 +25,7 @@ local X_train, y_train, sid_train, X_cv, y_cv, sid_cv, X_test, y_test, sid_test 
 		X_data,
 		y_data,
 		sid_data,
-		10, true
+		arg.numstreams, true
 )
 
 --Moving the following function to the top create a bug, where the test-set and cv-set is empty!
@@ -104,20 +104,17 @@ for epoch=1, arg.epochs do
             print("Cross-Validating...")
 			local cvConfusion = optim.ConfusionMatrix(classes)
 
-		    while not cvLoader.epoch_done do
-		        local cv_input, cv_target = cvLoader:load_batch(X_cv, y_cv, sid_cv)
-
-        while not batchLoader.epoch_cv_done do
+	        while not batchLoader.epoch_cv_done do
 		        local cv_input, cv_target = batchLoader:load_cvbatch(X_cv, y_cv, sid_cv)
 
-	            arg.testing = true
-		        local preds = lmodel:forward(cv_input)
-		        arg.testing = false
-		        local _, predClass = th.max(preds, 2)
-		        for s=1, predClass:size(1) do
-		            cvConfusion:add(predClass[s], cv_target[s])
-		        end
-		    end
+		        arg.testing = true
+			    local preds = lmodel:forward(cv_input)
+			    arg.testing = false
+			    local _, predClass = th.max(preds, 2)
+			    for s=1, predClass:size(1) do
+			        cvConfusion:add(predClass[s], cv_target[s])
+			    end
+			end
 		    print(cvConfusion)
 		    print("Mean class accuracy (CV) is: " .. tostring(cvConfusion.totalValid * 100))
 		    print(trainConfusion)
