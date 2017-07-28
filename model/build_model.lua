@@ -21,7 +21,8 @@ local function conv_layer(stream, nInputFeatMap, nOutputFeatMap)
 
     stream[1] = nn.SpatialBatchNormalization(nOutputFeatMap, nil, 0.9)(stream[1])
     for i=2, arg.numstreams do
-        stream[i] = nn.SpatialBatchNormalization(nOutputFeatMap, nil, 0.9)(stream[i])
+        stream[i] = nn.SpatialBatchNormalization(nOutputFeatMap, nil, 0.9)
+                    :clone(stream[i-1], "weight", "bias", "gradWeight", "gradBias")(stream[i])
     end
 
     stream[1] = nn.ReLU()(stream[1])
@@ -44,7 +45,8 @@ local function local_layer(stream, dropout)
 
     stream[1] = nn.SpatialBatchNormalization(64, nil, 0.9)(stream[1])
     for i=2, arg.numstreams do
-        stream[i] = nn.SpatialBatchNormalization(64, nil, 0.9)(stream[i])
+        stream[i] = nn.SpatialBatchNormalization(64, nil, 0.9)
+                    :clone(stream[i-1], "weight", "bias", "gradWeight", "gradBias")(stream[i])
     end
 
     stream[1] = nn.ReLU()(stream[1])
@@ -77,7 +79,8 @@ local function affine_layer(stream, inputDim, outputDim, dropout)
 
     stream[1] = nn.BatchNormalization(outputDim, nil, 0.9)(stream[1])
     for i=2, arg.numstreams do
-        stream[i] = nn.BatchNormalization(outputDim, nil, 0.9)(stream[i])
+        stream[i] = nn.BatchNormalization(outputDim, nil, 0.9)
+                    :clone(stream[i-1], "weight", "bias", "gradWeight", "gradBias")(stream[i])
     end
 
     stream[1] = nn.ReLU()(stream[1])
@@ -122,9 +125,15 @@ build_model = function(verbose)
     --Input Layer
     local inp = {}
     local h1 = {}
-    for i=1,arg.numstreams do
+    inp[1] = nn.Identity()()
+    for i=2,arg.numstreams do
         inp[i] = nn.Identity()()
-        h1[i] = nn.SpatialBatchNormalization(1, nil, 0.9)(inp[i])
+    end
+
+    h1[1] = nn.SpatialBatchNormalization(1, nil, 0.9)(inp[1])
+    for i=2,arg.numstreams do
+        h1[i] = nn.SpatialBatchNormalization(1, nil, 0.9)
+                :clone(h1[i-1], "weight", "bias", "gradWeight", "gradBias")(inp[i])
     end
 
     --Layer1: Conv1 (64, stride=1, 3x3) --Check what exactly was implemented before this!
