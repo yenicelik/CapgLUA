@@ -18,7 +18,7 @@ BatchLoader.__index = BatchLoader
 
 function BatchLoader:new()
     local self = setmetatable({}, BatchLoader)
-    self.NUM_STREAMS = 8
+    self.NUM_STREAMS = arg.numstreams
     self.batch_counter = 1
     self.batch_cv_counter = 1
     self.batch_test_counter = 1
@@ -83,8 +83,8 @@ function BatchLoader:init(X, y, sids, batch_size, argshuffle)
             local cur_stream = possible_indecies[math.random(#possible_indecies)]
             local index_of_first_few = hf.take_n(batch_size, session_ids[cur_stream])
 
-            tmp_x[i] = X:index(1, th.LongTensor(index_of_first_few))
-            tmp_y[i] = y:index(1, th.LongTensor(index_of_first_few))
+            tmp_x[i] = X:index(1, th.LongTensor(index_of_first_few)):view(-1, 1, 8, 16)
+            tmp_y[i] = y:index(1, th.LongTensor(index_of_first_few)):view(-1)
             tmp_sid[i] = sids:index(1, th.LongTensor(index_of_first_few))
 
             used_samples = used_samples + batch_size
@@ -188,7 +188,7 @@ function BatchLoader:load_batch(X_batches, y_batches)
         self.batch_counter = 1
     end
 
-    return Xout, yout
+    return Xout, th.cat(yout, 1)
 end
 
 function BatchLoader:load_cvbatch(X_cv_batches, y_cv_batches)

@@ -6,6 +6,7 @@ arg = nil
 if not arg then
     arg = {
         numgestures     = 8,                 --number of gestures we use
+        numstreams      = 10,                --how many streams to
         dropout         = 0.5,               --passing dropout probability
         coefL2          = 0.001,             --L2 penalty on the weights
         batchsize       = 10,                --batch size
@@ -15,7 +16,7 @@ if not arg then
         devLength       = 50,                --how many files should be read for dev-mode
         --For parameter 'dev': false gives me a string, true gives me a boolean...
         dev             = true,              --use the full dataset (not testing model)
-        testing         = false,             --true if recognition/testing phase
+        testing         = true,             --true if recognition/testing phase
         cuda            = false,             --whether we use cuda or not
         shuffleDevSet   = true,              --shuffle the development set
         trainSplit      = 0.5,               --percentage of data to use for training
@@ -27,6 +28,10 @@ if not arg then
         saveModel       = true,              --whether to save model or not
         useExistingModel= false             --Whether to use existing model
     }
+end
+
+if arg.testing then
+    arg.dropout = 0.0
 end
 
 --trainSplit, cvSplit and testSplit should sum to 1
