@@ -100,31 +100,31 @@ for epoch=1, arg.epochs do
 			learningRateDevay = 0
 		}
 
-		optim.sgd(feval, lparameters, sgdState)
+		_, fs = optim.sgd(feval, lparameters, sgdState)
 
 		if batchLoader.batch_counter % tonumber(arg.cvEvery) == 0 then
-
-			if arg.saveModel then
-			    print("Saving model... ")
-			    th.save(arg.modelFilename, lmodel)
-			end
-
-            print("Cross-Validating...")
-			local cvConfusion = optim.ConfusionMatrix(classes)
-
-	        while not batchLoader.epoch_cv_done do
-		        local cv_input, cv_target = batchLoader:load_cvbatch(X_cv, y_cv, sid_cv)
-
-		        arg.testing = true
-			    local preds = lmodel:forward(cv_input)
-			    arg.testing = false
-			    local _, predClass = th.max(preds, 2)
-			    for s=1, predClass:size(1) do
-			        cvConfusion:add(predClass[s], cv_target[s])
-			    end
-			end
-		    print(cvConfusion)
-		    print("Mean class accuracy (CV) is: " .. tostring(cvConfusion.totalValid * 100))
+--
+--			if arg.saveModel then
+--			    print("Saving model... ")
+--			    th.save(arg.modelFilename, lmodel)
+--			end
+--
+--            print("Cross-Validating...")
+--			local cvConfusion = optim.ConfusionMatrix(classes)
+--
+--	        while not batchLoader.epoch_cv_done do
+--		        local cv_input, cv_target = batchLoader:load_cvbatch(X_cv, y_cv, sid_cv)
+--
+--		        arg.testing = true
+--			    local preds = lmodel:forward(cv_input)
+--			    arg.testing = false
+--			    local _, predClass = th.max(preds, 2)
+--			    for s=1, predClass:size(1) do
+--			        cvConfusion:add(predClass[s], cv_target[s])
+--			    end
+--			end
+--		    print(cvConfusion)
+--		    print("Mean class accuracy (CV) is: " .. tostring(cvConfusion.totalValid * 100))
 		    print(trainConfusion)
 		    print("Mean class accuracy (Train) is: " .. tostring(trainConfusion.totalValid * 100))
 		    batchLoader.epoch_cv_done = false

@@ -15,15 +15,15 @@ if not arg then
         momentum        = 1,                 --sgd momentum factor
         devLength       = 500,                --how many files should be read for dev-mode. Make this about 40 minimum such that one from the test and cv classes are included!
         --For parameter 'dev': false gives me a string, true gives me a boolean...
-        dev             =false,              --use the full dataset (not testing model)
-        testing         = true,              --true if recognition/testing phase
+        dev             = true,              --use the full dataset (not testing model)
+        testing         = false,              --true if recognition/testing phase
         cuda            = false,             --whether we use cuda or not
         shuffleDevSet   = true,              --shuffle the development set
         trainSplit      = 0.5,               --percentage of data to use for training
         cvSplit         = 0.1,               --percentage of data to use for cross-validation
         testSplit       = 0.4,               --percentage of data to use for testing (final model evaluation)
-        cvEvery         = 9000,               --how often to cross-validate
-        epochs          = 2,                 --total number of epochs to run
+        cvEvery         = 200,               --how often to cross-validate
+        epochs          = 9,                 --total number of epochs to run
         modelFilename   = "./test.model",    --path where an existing model is saved or loaded
         saveModel       = true,              --whether to save model or not
         useExistingModel= false,             --Whether to use existing model
