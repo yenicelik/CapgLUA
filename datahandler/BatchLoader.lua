@@ -117,8 +117,8 @@ function BatchLoader:init(X, y, sids, batch_size, argshuffle)
             local cur_stream = 2
             local index_of_first_few = hf.take_n(batch_size, session_ids[cur_stream])
 
-            tmp_x[i] = X:index(1, th.LongTensor(index_of_first_few))
-            tmp_y[i] = y:index(1, th.LongTensor(index_of_first_few))
+            tmp_x[i] = X:index(1, th.LongTensor(index_of_first_few)):view(-1, 1, 8, 16)
+            tmp_y[i] = y:index(1, th.LongTensor(index_of_first_few)):view(-1)
             tmp_sid[i] = sids:index(1, th.LongTensor(index_of_first_few))
 
             used_samples = used_samples + batch_size
@@ -151,8 +151,8 @@ function BatchLoader:init(X, y, sids, batch_size, argshuffle)
             local cur_stream = 5
             local index_of_first_few = hf.take_n(batch_size, session_ids[cur_stream])
 
-            tmp_x[i] = X:index(1, th.LongTensor(index_of_first_few))
-            tmp_y[i] = y:index(1, th.LongTensor(index_of_first_few))
+            tmp_x[i] = X:index(1, th.LongTensor(index_of_first_few)):view(-1, 1, 8, 16)
+            tmp_y[i] = y:index(1, th.LongTensor(index_of_first_few)):view(-1)
             tmp_sid[i] = sids:index(1, th.LongTensor(index_of_first_few))
 
             used_samples = used_samples + batch_size
@@ -188,6 +188,13 @@ function BatchLoader:load_batch(X_batches, y_batches)
         self.batch_counter = 1
     end
 
+    if arg.useCuda then
+        for i=1, #Xout do
+            Xout[i] = Xout[i]:cuda()
+        end
+        return Xout, th.cat(yout, 1):cuda()
+    end
+
     return Xout, th.cat(yout, 1)
 end
 
@@ -201,7 +208,14 @@ function BatchLoader:load_cvbatch(X_cv_batches, y_cv_batches)
         self.batch_cv_counter = 1
     end
 
-    return Xout, yout
+    if arg.useCuda then
+        for i=1, #Xout do
+            Xout[i] = Xout[i]:cuda()
+        end
+        return Xout, th.cat(yout, 1):cuda()
+    end
+
+    return Xout, th.cat(yout, 1)
 end
 
 function BatchLoader:load_test_batch(X_test_batches, y_test_batches)
@@ -214,5 +228,12 @@ function BatchLoader:load_test_batch(X_test_batches, y_test_batches)
         self.batch_test_counter = 1
     end
 
-    return Xout, yout
+    if arg.useCuda then
+        for i=1, #Xout do
+            Xout[i] = Xout[i]:cuda()
+        end
+        return Xout, th.cat(yout, 1):cuda()
+    end
+
+    return Xout, th.cat(yout, 1)
 end
