@@ -4,9 +4,6 @@ require "../datahandler/BatchLoader.lua"
 require "optim"
 local interSessionImporter = require "../datahandler/InterSessionImporter"
 local th = require('torch')
-if arg.useCuda then
-	require "cunn"
-end
 
 local X_data, y_data, sid_data = interSessionImporter.init()
 
@@ -28,7 +25,7 @@ local X_train, y_train, sid_train, X_cv, y_cv, sid_cv, X_test, y_test, sid_test 
 		X_data,
 		y_data,
 		sid_data,
-		arg.numstreams, true
+		10, true
 )
 
 --Moving the following function to the top create a bug, where the test-set and cv-set is empty!
@@ -38,11 +35,6 @@ if arg.useExistingModel then
     lmodel, lcriterion, lparameters, lgradParameters = load_model()
 else
     lmodel, lcriterion, lparameters, lgradParameters = build_model(true)
-end
-
-if arg.useCuda then
-	print("Using CUDA...")
-	lmodel = lmodel:cuda()
 end
 
 local classes = {}
@@ -112,17 +104,20 @@ for epoch=1, arg.epochs do
             print("Cross-Validating...")
 			local cvConfusion = optim.ConfusionMatrix(classes)
 
-	        while not batchLoader.epoch_cv_done do
+		    while not cvLoader.epoch_done do
+		        local cv_input, cv_target = cvLoader:load_batch(X_cv, y_cv, sid_cv)
+
+        while not batchLoader.epoch_cv_done do
 		        local cv_input, cv_target = batchLoader:load_cvbatch(X_cv, y_cv, sid_cv)
 
-		        arg.testing = true
-			    local preds = lmodel:forward(cv_input)
-			    arg.testing = false
-			    local _, predClass = th.max(preds, 2)
-			    for s=1, predClass:size(1) do
-			        cvConfusion:add(predClass[s], cv_target[s])
-			    end
-			end
+	            arg.testing = true
+		        local preds = lmodel:forward(cv_input)
+		        arg.testing = false
+		        local _, predClass = th.max(preds, 2)
+		        for s=1, predClass:size(1) do
+		            cvConfusion:add(predClass[s], cv_target[s])
+		        end
+		    end
 		    print(cvConfusion)
 		    print("Mean class accuracy (CV) is: " .. tostring(cvConfusion.totalValid * 100))
 		    print(trainConfusion)

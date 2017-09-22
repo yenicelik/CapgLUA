@@ -1,14 +1,9 @@
 import zipfile
 import os
-import sys
-import pip
 try:
     import wget
 except:
-    print("Please install the python module `wget`. For this, execute the following command: `pip install wget`")
-    pip.main(['install', "wget"] )
-    import wget
-    
+	print("Please install the python module `wget`. For this, execute the following command: `pip install wget`")
 
 
 rootA = "./Datasets/Preprocessed/DB-a"
@@ -36,9 +31,8 @@ def dlDataset(link, directory, no_of_subj):
 		try:
 			print("Extracting..: " + file)
 			zip = zipfile.ZipFile(file)
-			zip.extractall(str(file[:-4]))
+			zip.extractall(file[:-4])
 			zip.close()
-                        os.remove(file)
 		except:
 			pass
 	os.chdir("../../../")
